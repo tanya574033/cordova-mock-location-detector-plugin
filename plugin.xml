@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<plugin id="com.tanyakron.cordovadetectmocklocation" version="0.0.1" xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
+    <name>CordovaDetectMockLocationPlugin</name>
+    <js-module name="CordovaDetectMockLocationPlugin" src="www/CordovaDetectMockLocationPlugin.js">
+        <clobbers target="cordova.plugins.CordovaDetectMockLocationPlugin" />
+    </js-module>
+    <platform name="ios">
+        <config-file parent="/*" target="config.xml">
+            <feature name="CordovaDetectMockLocationPlugin">
+                <param name="ios-package" value="CordovaDetectMockLocationPlugin" />
+            </feature>
+        </config-file>
+        <source-file src="src/ios/CordovaDetectMockLocationPlugin.m" />
+    </platform>
+</plugin>
