@@ -23,14 +23,16 @@ import java.util.List;
 public class CordovaDetectMockLocationPlugin extends CordovaPlugin {
 
     private static final int REQUEST_LOCATION_PERMISSION = 1;
+    private CallbackContext callbackContext; // Member variable to store the callback context
 
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
+        this.callbackContext = callbackContext; // Store the callback context
         if ("detectMockLocation".equals(action)) {
             if (checkLocationPermission()) {
                 detectMockLocation(callbackContext);
             } else {
-                requestLocationPermission(callbackContext);
+                requestLocationPermission();
             }
             return true;
         }
@@ -90,7 +92,7 @@ public class CordovaDetectMockLocationPlugin extends CordovaPlugin {
         return false;
     }
 
-    private void requestLocationPermission(CallbackContext callbackContext) {
+    private void requestLocationPermission() {
         cordova.requestPermission(this, REQUEST_LOCATION_PERMISSION, Manifest.permission.ACCESS_FINE_LOCATION);
     }
 
@@ -100,7 +102,7 @@ public class CordovaDetectMockLocationPlugin extends CordovaPlugin {
         super.onRequestPermissionResult(requestCode, permissions, grantResults);
         if (requestCode == REQUEST_LOCATION_PERMISSION) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                detectMockLocation(callbackContext);
+                detectMockLocation(callbackContext); // Use the stored callback context
             } else {
                 handleError(new JSONObject(), "PERMISSION_DENIED", "Location permission denied.", callbackContext);
             }
