@@ -9,11 +9,11 @@ import android.annotation.SuppressLint;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import com.google.android.gms.location.LocationCallback;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationResult;
-import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.location.FusedLocationProviderClient;
+import android.gms.location.LocationCallback;
+import android.gms.location.LocationRequest;
+import android.gms.location.LocationResult;
+import android.gms.location.LocationServices;
+import android.gms.location.FusedLocationProviderClient;
 
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CallbackContext;
