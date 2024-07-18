@@ -1,100 +1,123 @@
 package com.tanyakron.cordovadetectmocklocation;
 
 import android.Manifest;
-import android.app.Activity;
-import android.content.DialogInterface;
-import android.content.pm.PackageManager;
-import android.os.Build;
 import android.annotation.SuppressLint;
-import androidx.appcompat.app.AlertDialog;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-import android.gms.location.LocationCallback;
-import android.gms.location.LocationRequest;
-import android.gms.location.LocationResult;
-import android.gms.location.LocationServices;
-import android.gms.location.FusedLocationProviderClient;
+import android.content.Context;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationManager;
+import android.os.Build;
+import android.util.Log;
 
-import org.apache.cordova.CordovaPlugin;
+import androidx.core.app.ActivityCompat;
+
 import org.apache.cordova.CallbackContext;
-import org.json.JSONArray;
+import org.apache.cordova.CordovaPlugin;
+import org.apache.cordova.PluginResult;
 import org.json.JSONException;
+import org.json.JSONObject;
+import org.json.JSONArray;
+
+import java.util.List;
 
 public class CordovaDetectMockLocationPlugin extends CordovaPlugin {
 
-    private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
-    private FusedLocationProviderClient mFusedLocationClient;
-    private CallbackContext permissionCallbackContext;
+    private static final int REQUEST_LOCATION_PERMISSION = 1;
 
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
-        if (action.equals("detectMockLocation")) {
-            this.permissionCallbackContext = callbackContext;
-            this.detectMockLocation(callbackContext);
+        if ("detectMockLocation".equals(action)) {
+            if (checkLocationPermission()) {
+                detectMockLocation(callbackContext);
+            } else {
+                requestLocationPermission(callbackContext);
+            }
             return true;
         }
         return false;
     }
 
+    @SuppressLint("MissingPermission")
     private void detectMockLocation(CallbackContext callbackContext) {
-        Activity activity = cordova.getActivity();
-        if (ContextCompat.checkSelfPermission(activity,
-                Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(activity,
-                        Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            showPermissionAlert(activity);
+        JSONObject resultJSON = new JSONObject();
+
+        LocationManager locationManager = (LocationManager) cordova.getActivity()
+                .getSystemService(Context.LOCATION_SERVICE);
+
+        if (locationManager == null) {
+            handleError(resultJSON, "LOCATION_MANAGER_OBJ_NOT_FOUND", "\"locationManager\" not found.",
+                    callbackContext);
         } else {
-            boolean result = isLocationFromMockProvider(activity);
-            callbackContext.success("Mock location detection result: " + result);
+            Location location = null;
+            String usedProvider = "";
+            List<String> providers = locationManager.getProviders(true);
+
+            for (String provider : providers) {
+                Location locationFromProvider = locationManager.getLastKnownLocation(provider);
+
+                if (locationFromProvider != null
+                        && (location == null || locationFromProvider.getAccuracy() < location.getAccuracy())) {
+                    location = locationFromProvider;
+                    usedProvider = provider;
+                }
+            }
+
+            if (location != null) {
+                boolean isMockLocation = (Build.VERSION.SDK_INT < 31) ? location.isFromMockProvider()
+                        : location.isMock();
+
+                try {
+                    resultJSON.put("isMockLocation", isMockLocation);
+                    Log.d("CordovaDetectMockLocation", "Used location provider is: " + usedProvider);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                handleError(resultJSON, "LOCATION_OBJ_NOT_FOUND",
+                        "\"location\" object not found. (lastKnownLocation may be null)", callbackContext);
+            }
+        }
+
+        PluginResult result = new PluginResult(PluginResult.Status.OK, resultJSON);
+        callbackContext.sendPluginResult(result);
+    }
+
+    private boolean checkLocationPermission() {
+        if (cordova.hasPermission(Manifest.permission.ACCESS_FINE_LOCATION) ||
+                cordova.hasPermission(Manifest.permission.ACCESS_COARSE_LOCATION)) {
+            return true;
+        }
+        return false;
+    }
+
+    private void requestLocationPermission(CallbackContext callbackContext) {
+        cordova.requestPermission(this, REQUEST_LOCATION_PERMISSION, Manifest.permission.ACCESS_FINE_LOCATION);
+    }
+
+    @Override
+    public void onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults)
+            throws JSONException {
+        super.onRequestPermissionResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_LOCATION_PERMISSION) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                detectMockLocation(callbackContext);
+            } else {
+                handleError(new JSONObject(), "PERMISSION_DENIED", "Location permission denied.", callbackContext);
+            }
         }
     }
 
-    private void showPermissionAlert(Activity activity) {
-        new AlertDialog.Builder(activity)
-                .setTitle("Location Permission Needed")
-                .setMessage(
-                        "This app needs the Location permission to detect mock locations. Please grant the permission to proceed.")
-                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int which) {
-                        ActivityCompat.requestPermissions(activity,
-                                new String[] { Manifest.permission.ACCESS_FINE_LOCATION,
-                                        Manifest.permission.ACCESS_COARSE_LOCATION },
-                                LOCATION_PERMISSION_REQUEST_CODE);
-                    }
-                })
-                .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int which) {
-                        dialog.dismiss();
-                        permissionCallbackContext.error("Location permissions are not granted.");
-                    }
-                })
-                .create()
-                .show();
-    }
-
-    @SuppressLint("ObsoleteSdkInt")
-    public boolean isLocationFromMockProvider(Activity activity) {
-        boolean isFromMockProvider = false;
-        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(activity);
-        LocationRequest locationRequest = LocationRequest.create();
-        locationRequest.setInterval(1000);
-        locationRequest.setFastestInterval(500);
-        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-
-        LocationCallback locationCallback = new LocationCallback() {
-            @Override
-            public void onLocationResult(LocationResult locationResult) {
-                Location location = locationResult.getLastLocation();
-                if (location != null) {
-                    if (Build.VERSION.SDK_INT <= 30) {
-                        isFromMockProvider = location.isFromMockProvider();
-                    } else if (Build.VERSION.SDK_INT >= 31) {
-                        isFromMockProvider = location.isMock();
-                    }
-                }
-            }
-        };
-
-        return isFromMockProvider;
+    private void handleError(JSONObject resultJSON, String code, String message, CallbackContext callbackContext) {
+        try {
+            JSONObject error = new JSONObject();
+            error.put("code", code);
+            error.put("message", message);
+            resultJSON.put("isMockLocation", "");
+            resultJSON.put("error", error);
+            PluginResult result = new PluginResult(PluginResult.Status.ERROR, resultJSON);
+            callbackContext.sendPluginResult(result);
+        } catch (JSONException e) {
+            Log.e("CordovaDetectMockLocation", "Error creating JSON error object", e);
+        }
     }
 }
