@@ -90,25 +90,26 @@ public class CordovaDetectMockLocationPlugin extends CordovaPlugin {
         callbackContext.sendPluginResult(result);
     }
 
-    private void detectAllowMockLocation(Activity activity) {
+    private void detectAllowMockLocation(CallbackContext callbackContext) {
         boolean isAllowMockLocation;
         JSONObject resultJSON = new JSONObject();
 
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.LOLLIPOP) {
-            if (Settings.Secure.getString(
-                    activity.getContentResolver(),
-                    Settings.Secure.ALLOW_MOCK_LOCATION).equals("0")) {
-                isAllowMockLocation = false;
-            } else {
-                isAllowMockLocation = true;
-            }
+            isAllowMockLocation = !Settings.Secure.getString(
+                    cordova.getActivity().getContentResolver(),
+                    Settings.Secure.ALLOW_MOCK_LOCATION).equals("0");
         } else {
             isAllowMockLocation = false;
         }
 
-        resultJSON.put("isAllowMockLocation", isAllowMockLocation);
+        try {
+            resultJSON.put("isAllowMockLocation", isAllowMockLocation);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
 
-        return resultJSON;
+        PluginResult result = new PluginResult(PluginResult.Status.OK, resultJSON);
+        callbackContext.sendPluginResult(result);
     }
 
     private boolean checkLocationPermission() {
