@@ -1,6 +1,6 @@
 {
   "name": "cordova-mock-location-detector-plugin",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Plugin for detecting mock GPS locations",
   "main": "index.js",
   "scripts": {

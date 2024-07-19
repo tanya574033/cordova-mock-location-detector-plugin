@@ -8,6 +8,7 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.os.Build;
 import android.util.Log;
+import android.provider.Settings;
 
 import androidx.core.app.ActivityCompat;
 
