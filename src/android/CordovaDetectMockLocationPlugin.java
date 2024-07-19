@@ -36,6 +36,12 @@ public class CordovaDetectMockLocationPlugin extends CordovaPlugin {
             }
             return true;
         }
+
+        if ("detectAllowMockLocation".equals(action)) {
+            detectAllowMockLocation();
+            return true;
+        }
+
         return false;
     }
 
@@ -82,6 +88,27 @@ public class CordovaDetectMockLocationPlugin extends CordovaPlugin {
 
         PluginResult result = new PluginResult(PluginResult.Status.OK, resultJSON);
         callbackContext.sendPluginResult(result);
+    }
+
+    private void detectAllowMockLocation(Activity activity) {
+        boolean isAllowMockLocation;
+        JSONObject resultJSON = new JSONObject();
+
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.LOLLIPOP) {
+            if (Settings.Secure.getString(
+                    activity.getContentResolver(),
+                    Settings.Secure.ALLOW_MOCK_LOCATION).equals("0")) {
+                isAllowMockLocation = false;
+            } else {
+                isAllowMockLocation = true;
+            }
+        } else {
+            isAllowMockLocation = false;
+        }
+
+        resultJSON.put("isAllowMockLocation", isAllowMockLocation);
+
+        return resultJSON;
     }
 
     private boolean checkLocationPermission() {
