@@ -38,7 +38,7 @@ public class CordovaDetectMockLocationPlugin extends CordovaPlugin {
         }
 
         if ("detectAllowMockLocation".equals(action)) {
-            detectAllowMockLocation();
+            detectAllowMockLocation(callbackContext);
             return true;
         }
 
